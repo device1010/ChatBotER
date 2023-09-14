@@ -11,7 +11,7 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.llms import OpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
-
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -75,9 +75,17 @@ history = []
 
 app = FastAPI() 
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 class Prompt (BaseModel):
     user_prompt: str
 
-@app.get('/chat_re')
+@app.post('/chat_re')
 async def Post_prompt (prompt: Prompt):
     return {"response" : handler_user_input (prompt.user_prompt,conversation_chain, history)}

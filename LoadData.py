@@ -1,6 +1,7 @@
 import os
 import openai
 import sys
+import streamlit as st
 from dotenv import load_dotenv, find_dotenv
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter  import RecursiveCharacterTextSplitter, CharacterTextSplitter
@@ -8,6 +9,9 @@ from langchain.vectorstores import Chroma
 from langchain.document_loaders import DirectoryLoader
 from langchain.schema.document import Document
 from langchain.embeddings import OpenAIEmbeddings 
+from langchain.llms import OpenAI
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
 
 def get_data_loaded():
     pages = ""
@@ -35,8 +39,18 @@ def get_vector_store(text_chunks):
         doc = Document(page_content=text_chunk)
         documents.append(doc)
 
-    vectorstore = Chroma.from_documents(documents=documents, embedding= embeddings, persist_directory=db_directory)
-    return vectorstore
+    vector_store = Chroma.from_documents(documents=documents, embedding= embeddings, persist_directory=db_directory)
+    return vector_store
+
+def  get_conversation_chain ( vector_store ): 
+    conversation_chain = ConversationalRetrievalChain.from_llm(OpenAI(temperature=0), vector_store.as_retriever())
+    return conversation_chain
+
+def handle_user_input(question,conversation_chain,history):
+    response = conversation_chain({"question": question, "chat_history":history})
+    history.append((question,response["answer"]))
+    return response["answer"]
+
 
 os.environ["OPENAI_API_KEY"] = "API-KEY"
 _ = load_dotenv(find_dotenv()) # read local .env file
@@ -51,5 +65,13 @@ chunks = get_chunks(data,500,100)  #Send data, chunk size, chunk overlap, return
 
 vector_store = get_vector_store(chunks)
 #print(vector_store)
+
+conversation_chain = get_conversation_chain(vector_store)
+
+history = []
+question = "What is 1 plus 1?"
+response = handle_user_input(question,conversation_chain,history)
+print(response)
+
 #print(pages[0][1].page_content[0:100])
 

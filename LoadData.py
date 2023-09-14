@@ -1,6 +1,5 @@
 import os
 import openai
-import sys
 import streamlit as st
 from dotenv import load_dotenv, find_dotenv
 from langchain.document_loaders import PyPDFLoader
@@ -13,6 +12,9 @@ from langchain.llms import OpenAI
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 
+from fastapi import FastAPI
+from pydantic import BaseModel
+
 def get_data_loaded():
     pages = ""
     for archivo in os.listdir("Resourcesp"):
@@ -21,9 +23,6 @@ def get_data_loaded():
             loader = PyPDFLoader(ruta_pdf)
             for page in loader.load():
                 pages+=page.page_content
-                #print(page.page_content)
-            #pages.append(loader.load())
-
     return pages
 
 def get_chunks(data,chunk_size,chunk_overlap):
@@ -46,7 +45,7 @@ def  get_conversation_chain ( vector_store ):
     conversation_chain = ConversationalRetrievalChain.from_llm(OpenAI(temperature=0), vector_store.as_retriever())
     return conversation_chain
 
-def handle_user_input(question,conversation_chain,history):
+def handler_user_input(question,conversation_chain,history):
     response = conversation_chain({"question": question, "chat_history":history})
     history.append((question,response["answer"]))
     return response["answer"]
@@ -69,9 +68,16 @@ vector_store = get_vector_store(chunks)
 conversation_chain = get_conversation_chain(vector_store)
 
 history = []
-question = "What is 1 plus 1?"
-response = handle_user_input(question,conversation_chain,history)
-print(response)
 
-#print(pages[0][1].page_content[0:100])
+#question = "que es biomasa?"
+#response = handler_user_input(question,conversation_chain,history)
+#print(response)
 
+app = FastAPI() 
+
+class Prompt (BaseModel):
+    user_prompt: str
+
+@app.get('/chat_re')
+async def Post_prompt (prompt: Prompt):
+    return {"response" : handler_user_input (prompt.user_prompt,conversation_chain, history)}

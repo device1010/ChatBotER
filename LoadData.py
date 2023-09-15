@@ -79,6 +79,7 @@ def anzo_insert(prompt):
             else:
                 print('Error saving prompt in graph')
 
+
 os.environ["OPENAI_API_KEY"] = "API-KEY"
 _ = load_dotenv(find_dotenv()) # read local .env file
 openai.api_key = os.environ['OPENAI_API_KEY']

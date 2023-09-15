@@ -14,6 +14,8 @@ from langchain.memory import ConversationBufferMemory
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from pydantic import BaseModel
+from anzograph import Anzo
+from SPARQLWrapper import JSON
 
 def get_data_loaded():
     pages = ""
@@ -50,11 +52,41 @@ def handler_user_input(question,conversation_chain,history):
     history.append((question,response["answer"]))
     return response["answer"]
 
+def connection_gpt( prompt):
+    messages = [{"role":"user","content": prompt}]
+    res = openai.ChatCompletion.create(
+        model = "gpt-3.5-turbo",
+        messages = messages,
+        temperature = 0,
+    )
+    gptResponse = res.choices[0].message["content"]
+    return gptResponse
+    
 
-os.environ["OPENAI_API_KEY"] = "API-KEY"
+def anzo_insert(prompt):
+    if conection.connect():
+            anzo_prompt = f"convierte el siguiente texto en un insert de SPARQL sin prefijos, para insertarlo a un grafo llamado Energias_Renovables: {prompt}"
+            res = connection_gpt(anzo_prompt)
+            print(res)
+            conection.anzograph.method = 'POST'
+            conection.anzograph.setQuery(f""" {res}""".encode("utf-8"))
+            conection.anzograph.setReturnFormat(JSON)
+
+            results = conection.anzograph.query().convert()
+
+            if results in results:
+                print( 'prompt success saved in graph')
+            else:
+                print('error saving prompt in graph')
+
+os.environ["OPENAI_API_KEY"] = "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"
 _ = load_dotenv(find_dotenv()) # read local .env file
 openai.api_key = os.environ['OPENAI_API_KEY']
 db_directory = './vectorizing' 
+
+conection = Anzo()
+
+anzo_connection = conection.connection
 
 data = get_data_loaded()
 #print(data)
@@ -88,4 +120,8 @@ class Prompt (BaseModel):
 
 @app.post('/chat_re')
 async def Post_prompt (prompt: Prompt):
-    return {"response" : handler_user_input (prompt.user_prompt,conversation_chain, history)}
+    response = handler_user_input (prompt.user_prompt,conversation_chain, history)
+    anzo_insert(prompt)
+
+    return {"response" : response }
+

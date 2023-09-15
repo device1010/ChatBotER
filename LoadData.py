@@ -75,27 +75,23 @@ def anzo_insert(prompt):
             results = conection.anzograph.query().convert()
 
             if results in results:
-                print( 'prompt success saved in graph')
+                print( 'Prompt saved in graph')
             else:
-                print('error saving prompt in graph')
+                print('Error saving prompt in graph')
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = "API-KEY"
 _ = load_dotenv(find_dotenv()) # read local .env file
 openai.api_key = os.environ['OPENAI_API_KEY']
 db_directory = './vectorizing' 
 
 conection = Anzo()
-
 anzo_connection = conection.connection
 
 data = get_data_loaded()
-#print(data)
 
 chunks = get_chunks(data,500,100)  #Send data, chunk size, chunk overlap, return chunks
-#print(chunks)
 
 vector_store = get_vector_store(chunks)
-#print(vector_store)
 
 conversation_chain = get_conversation_chain(vector_store)
 
@@ -122,6 +118,5 @@ class Prompt (BaseModel):
 async def Post_prompt (prompt: Prompt):
     response = handler_user_input (prompt.user_prompt,conversation_chain, history)
     anzo_insert(prompt)
-
     return {"response" : response }
 
